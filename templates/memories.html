@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Memories</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>Memories</header>
+    <!-- Category navigation -->
+    <div class="category-links">
+      <a href="/">🏠 Home</a>  |
+      <a href="/messages">💬 Message Board</a>  |
+      <a href="/countdown">📅 Meetups</a>  |
+      {% for key, names in categories.items() %}
+        {% if key != category_key %}
+          <a href="/{{key}}">{{ names[0] }} {{ names[1] }}</a>  |
+        {% endif %}
+      {% endfor %}
+    </div>
+    <a href="{{ url_for('add_memory') }}" class="button">+ Add Memory</a>
+
+    <div class="memory-list">
+        {% for memory in memories %}
+            <div class="memory-item">
+                <h2>
+                    <a href="{{ url_for('view_memory', memory_id=memory.id) }}">{{ memory.title }}</a>
+                </h2>
+                {% if memory.description %}
+                    <p class="preview">{{ memory.description[:100] }}{% if memory.description|length > 100 %}...{% endif %}</p>
+                {% endif %}
+                <p class="date">{{ memory.date_added[:10] }}</p>
+            </div>
+        {% else %}
+            <p>No memories yet.</p>
+        {% endfor %}
+    </div>
+</body>
+</html>

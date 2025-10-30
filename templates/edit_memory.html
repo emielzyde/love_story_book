@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Memory</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>Edit Memory</header>
+    <form method="POST" enctype="multipart/form-data">
+        <label>Title:</label>
+        <input type="text" name="title" value="{{ memory['title'] }}" required><br>
+
+        <br>
+        <label>Description:</label>
+        <br>
+        <textarea name="description">{{ memory['description'] }}</textarea><br>
+
+        <br>
+        <label>Add More Photos/Videos (optional):</label>
+        <input type="file" name="media_files" multiple><br>
+
+        <button type="submit">Save Changes</button>
+    </form>
+
+    <h2>Existing Files</h2>
+    {% include "_media_gallery.html" with context %}
+
+    <a href="{{ url_for('view_memory', memory_id=memory['id']) }}" class="button">Back</a>
+</body>
+</html>

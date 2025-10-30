@@ -1,0 +1,81 @@
+<!-- _media_gallery.html -->
+{% if media %}
+<div class="media-gallery">
+    {% for file in media %}
+        {% set fp = file['file_path'] %}
+        <div class="media-item-wrapper">
+            {% if fp.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')) %}
+                <img src="{{ url_for('uploaded_file', filename=fp) }}" alt="Image" class="lightbox-item">
+            {% elif fp.lower().endswith(('.mp4', '.mov', '.avi')) %}
+                <video class="lightbox-item" preload="metadata">
+                    <source src="{{ url_for('uploaded_file', filename=fp) }}">
+                </video>
+            {% endif %}
+
+            {% if editable %}
+            <form action="{{ url_for('delete_memory_file', file_id=file['id'], memory_id=memory['id']) }}" method="POST" class="delete-file-form">
+                <button type="submit" class="button delete small">Delete</button>
+            </form>
+            {% endif %}
+        </div>
+    {% endfor %}
+</div>
+
+<!-- Lightbox Overlay -->
+<div id="lightbox-overlay">
+    <span id="lightbox-close">&times;</span>
+    <div id="lightbox-content"></div>
+    <button id="lightbox-prev">❮</button>
+    <button id="lightbox-next">❯</button>
+</div>
+
+<script>
+    const overlay = document.getElementById('lightbox-overlay');
+    const content = document.getElementById('lightbox-content');
+    const items = Array.from(document.querySelectorAll('.lightbox-item'));
+    let currentIndex = -1;
+
+    function openLightbox(index) {
+        currentIndex = index;
+        const item = items[currentIndex];
+        const type = item.tagName.toLowerCase() === 'video' ? 'video' : 'image';
+
+        if (type === 'image') {
+            content.innerHTML = `<img src="${item.src}" style="max-width:90vw; max-height:80vh;">`;
+        } else {
+            const src = item.querySelector('source').src;
+            content.innerHTML = `<video controls autoplay style="max-width:90vw; max-height:80vh;"><source src="${src}"></video>`;
+        }
+        overlay.style.display = 'flex';
+    }
+
+    function closeLightbox() {
+        overlay.style.display = 'none';
+        content.innerHTML = '';
+    }
+
+    function navigate(direction) {
+        currentIndex = (currentIndex + direction + items.length) % items.length;
+        openLightbox(currentIndex);
+    }
+
+    document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+    document.getElementById('lightbox-prev').addEventListener('click', () => navigate(-1));
+    document.getElementById('lightbox-next').addEventListener('click', () => navigate(1));
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowLeft') navigate(-1);
+        if (e.key === 'ArrowRight') navigate(1);
+    });
+
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeLightbox();
+    });
+
+    items.forEach((item, index) => {
+        item.addEventListener('click', () => openLightbox(index));
+    });
+</script>
+{% else %}
+<p>No files uploaded yet.</p>
+{% endif %}

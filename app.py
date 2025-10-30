@@ -1,10 +1,17 @@
+import os
 import sqlite3
 from datetime import date, datetime, timedelta
 
-from flask import Flask, jsonify, render_template, request, redirect, url_for
+from flask import Flask, send_from_directory, jsonify, render_template, request, \
+    redirect, url_for
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
+app.config["UPLOAD_FOLDER"] = "uploads"
+app.config["ALLOWED_EXTENSIONS"] = {"png", "jpg", "jpeg", "gif", "mp4", "mov", "avi"}
+
+os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
 CATEGORIES = {
     "movies": ["🎬", "Movies"],
@@ -13,6 +20,14 @@ CATEGORIES = {
     "locations": ["🌍", "Locations"]
 }
 
+# --- Helper: allowed file types ---
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in app.config["ALLOWED_EXTENSIONS"]
+
+
+@app.route("/uploads/<filename>")
+def uploaded_file(filename):
+    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
 def get_db_connection():
     conn = sqlite3.connect('data.db')
@@ -224,6 +239,121 @@ def messages():
 
     grouped = group_messages_by_date(messages)
     return render_template('messages.html', grouped=grouped, users=users, categories=CATEGORIES)
+
+def row_to_dict(row):
+    if row is None:
+        return None
+    return {k: row[k] for k in row.keys()}
+
+@app.route("/memories")
+def memories():
+    conn = get_db_connection()
+    rows = conn.execute("SELECT * FROM memories ORDER BY date_added DESC").fetchall()
+    conn.close()
+
+    # convert each sqlite3.Row to a plain dict
+    memories = [row_to_dict(r) for r in rows]
+    return render_template("memories.html", memories=memories, categories=CATEGORIES)
+
+
+@app.route("/memory/<int:memory_id>")
+def view_memory(memory_id):
+    conn = get_db_connection()
+    mem_row = conn.execute("SELECT * FROM memories WHERE id = ?", (memory_id,)).fetchone()
+    media_rows = conn.execute("SELECT * FROM memory_media WHERE memory_id = ?", (memory_id,)).fetchall()
+    conn.close()
+
+    # Convert rows to dicts
+    memory = {k: mem_row[k] for k in mem_row.keys()} if mem_row else None
+    media = [{k: m[k] for k in m.keys()} for m in media_rows]
+
+    # editable=False for view page
+    return render_template("view_memory.html", memory=memory, media=media, editable=False)
+
+@app.route("/add_memory", methods=["GET", "POST"])
+def add_memory():
+    if request.method == "POST":
+        title = request.form["title"]
+        description = request.form["description"]
+
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("INSERT INTO memories (title, description) VALUES (?, ?)", (title, description))
+        memory_id = c.lastrowid
+
+        # Handle optional files
+        files = request.files.getlist("media_files")
+        for file in files:
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+                file.save(filepath)
+                c.execute("INSERT INTO memory_media (memory_id, file_path) VALUES (?, ?)", (memory_id, filename))
+
+        conn.commit()
+        conn.close()
+        return redirect(url_for("memories"))
+    return render_template("add_memory.html")
+
+@app.route("/edit_memory/<int:memory_id>", methods=["GET", "POST"])
+def edit_memory(memory_id):
+    conn = get_db_connection()
+    mem_row = conn.execute("SELECT * FROM memories WHERE id = ?", (memory_id,)).fetchone()
+    media_rows = conn.execute("SELECT * FROM memory_media WHERE memory_id = ?", (memory_id,)).fetchall()
+
+    memory = {k: mem_row[k] for k in mem_row.keys()} if mem_row else None
+    media = [{k: m[k] for k in m.keys()} for m in media_rows]
+
+    if request.method == "POST":
+        title = request.form.get("title")
+        description = request.form.get("description")
+
+        conn.execute(
+            "UPDATE memories SET title = ?, description = ? WHERE id = ?",
+            (title, description, memory_id)
+        )
+        conn.commit()
+
+        # Handle optional file uploads
+        files = request.files.getlist("media_files")
+        for f in files:
+            if f.filename:
+                filepath = secure_filename(f.filename)
+                f.save(os.path.join(app.config["UPLOAD_FOLDER"], filepath))
+                conn.execute(
+                    "INSERT INTO memory_media (memory_id, file_path) VALUES (?, ?)",
+                    (memory_id, filepath)
+                )
+        conn.commit()
+        conn.close()
+        return redirect(url_for("edit_memory", memory_id=memory_id))
+
+    conn.close()
+    # editable=True for edit page
+    return render_template("edit_memory.html", memory=memory, media=media, editable=True)
+
+
+@app.route("/delete_memory/<int:memory_id>", methods=["POST"])
+def delete_memory(memory_id):
+    conn = get_db_connection()
+    conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("memories"))
+
+@app.route("/delete_memory_file/<int:file_id>/<int:memory_id>", methods=["POST"])
+def delete_memory_file(file_id, memory_id):
+    conn = get_db_connection()
+    file = conn.execute("SELECT * FROM memory_media WHERE id = ?", (file_id,)).fetchone()
+    if file:
+        try:
+            os.remove(os.path.join(app.config["UPLOAD_FOLDER"], file["file_path"]))
+        except FileNotFoundError:
+            pass
+        conn.execute("DELETE FROM memory_media WHERE id = ?", (file_id,))
+        conn.commit()
+    conn.close()
+    return redirect(url_for("edit_memory", memory_id=memory_id))
 
 
 if __name__ == '__main__':

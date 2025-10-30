@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Memory</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>Add Memory</header>
+    <form method="POST" enctype="multipart/form-data">
+        <label>Title:</label>
+        <input type="text" name="title" required><br><br>
+
+        <label>Description:</label>
+        <br>
+        <textarea name="description"></textarea><br><br>
+
+        <label>Upload Photos/Videos (optional):</label>
+        <input type="file" name="media_files" multiple><br><br>
+
+        <button type="submit">Save Memory</button>
+    </form>
+    <a href="{{ url_for('memories') }}" class="button">Back</a>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ memory["title"] if memory else "Memory" }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    {% if not memory %}
+      <p>Memory not found.</p>
+      <a href="{{ url_for('memories') }}" class="button">Back to Memories</a>
+    {% else %}
+      <header>{{ memory["title"] }}</header>
+      <a href="{{ url_for('memories') }}" class="button">Back to Memories</a><br>
+      <p class="date">{{ memory["date_added"][:10] if memory["date_added"] else "" }}</p>
+      <p>{{ memory["description"] }}</p>
+
+      <h2>Files</h2>
+      {% include "_media_gallery.html" with context %}
+
+      <br>
+      <a href="{{ url_for('edit_memory', memory_id=memory['id']) }}" class="button">Edit</a>
+      <br><br>
+      <form action="{{ url_for('delete_memory', memory_id=memory['id']) }}" method="POST" style="display:inline;">
+          <button type="submit" class="button delete">Delete</button>
+      </form>
+      <br><br>
+    {% endif %}
+</body>
+</html>

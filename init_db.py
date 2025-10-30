@@ -9,6 +9,8 @@ c.execute("DROP TABLE IF EXISTS users")
 c.execute("DROP TABLE IF EXISTS meetings")
 c.execute("DROP TABLE IF EXISTS items")
 c.execute("DROP TABLE IF EXISTS messages")
+c.execute("DROP TABLE IF EXISTS memories")
+c.execute("DROP TABLE IF EXISTS memory_media")
 
 # === USERS TABLE ===
 c.execute("""
@@ -57,6 +59,24 @@ CREATE TABLE IF NOT EXISTS messages (
     content TEXT NOT NULL,
     timestamp TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
+)
+''')
+
+conn.execute('''
+CREATE TABLE IF NOT EXISTS memories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT,
+    date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+''')
+
+conn.execute('''
+CREATE TABLE IF NOT EXISTS memory_media (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    memory_id INTEGER,
+    file_path TEXT,
+    FOREIGN KEY (memory_id) REFERENCES memories (id) ON DELETE CASCADE
 )
 ''')
 

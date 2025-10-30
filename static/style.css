@@ -228,3 +228,143 @@ tr:hover {
   display: flex;
   gap: 5px;
 }
+
+/* --- Lightbox Overlay --- */
+#lightbox-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.9);
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  flex-direction: column;
+}
+
+#lightbox-content img,
+#lightbox-content video {
+  max-width: 90%;
+  max-height: 80vh;
+  border-radius: 10px;
+}
+
+#lightbox-close {
+  position: absolute;
+  top: 15px;
+  right: 25px;
+  color: white;
+  font-size: 40px;
+  cursor: pointer;
+}
+
+#lightbox-prev,
+#lightbox-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: white;
+  font-size: 40px;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+#lightbox-prev:hover,
+#lightbox-next:hover {
+  background: rgba(255,255,255,0.4);
+}
+
+#lightbox-prev {
+  left: 30px;
+}
+
+#lightbox-next {
+  right: 30px;
+}
+
+.form-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  max-width: 400px;
+  margin-inline: auto;
+}
+
+.memories-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+}
+
+.memory-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+  max-width: 350px;
+}
+
+.media-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.media-gallery img,
+.media-gallery video {
+  width: 100%;
+  max-width: 220px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.flash.success {
+  background: #c7f5c7;
+  padding: 5px;
+}
+
+.flash.error {
+  background: #f9d6d6;
+  padding: 5px;
+}
+
+.button.delete {
+    background-color: #d9534f;
+}
+
+.memory-list {
+    margin-top: 20px;
+}
+
+.memory-item {
+    border: 1px solid #ccc;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.preview {
+    color: #666;
+    font-size: 0.9em;
+}
+
+.media-gallery {
+    margin-top: 20px;
+}
+
+.media-item {
+    max-width: 300px;
+    border-radius: 8px;
+    margin: 8px;
+}
+
