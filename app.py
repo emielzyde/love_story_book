@@ -10,6 +10,7 @@ CATEGORIES = {
     "movies": ["🎬", "Movies"],
     "books": ["📖", "Books"],
     "restaurants": ["🍽", "Restaurants"],
+    "locations": ["🌍", "Locations"]
 }
 
 
