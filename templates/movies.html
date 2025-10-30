@@ -73,6 +73,12 @@
 <body>
   <h2>🎬 Movie Ranking</h2>
 
+  <div style="text-align:center;">
+    <a href="/home">🏠 Home</a> |
+    <a href="/movies">🎬 Movies</a> |
+  </div>
+
+
   <form method="POST" action="{{ url_for('movies') }}">
     <input type="text" name="title" placeholder="Add new movie..." required>
     <input type="submit" value="➕ Add Movie">
