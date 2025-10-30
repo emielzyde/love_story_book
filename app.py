@@ -45,6 +45,9 @@ def countdown():
     today = datetime.now().date()
     next_meeting = None
     days_until = None
+    upcoming = []
+    past = []
+
     for m in meetings:
         start = datetime.strptime(m['start_date'], "%Y-%m-%d").date()
         if start >= today:
@@ -52,7 +55,14 @@ def countdown():
             days_until = (start - today).days
             break
 
-    return render_template('meetups.html', meetings=meetings, next_meeting=next_meeting, days_until=days_until, categories=CATEGORIES)
+    for m in meetings:
+        start_date = datetime.strptime(m["start_date"], "%Y-%m-%d").date()
+        if start_date >= today:
+            upcoming.append(m)
+        else:
+            past.append(m)
+
+    return render_template('meetups.html', meetings=meetings, next_meeting=next_meeting, days_until=days_until, upcoming=upcoming, past=past, categories=CATEGORIES)
 
 
 @app.route('/edit_meeting/<int:id>', methods=['POST'])

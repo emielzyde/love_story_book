@@ -55,7 +55,7 @@
 </form>
 
 <!-- ✅ Meetings Table -->
-<h2 style="text-align:center;">All Meetups</h2>
+<h2 style="text-align:center;">Upcoming Meetups</h2>
 <table>
   <tr>
     <th>Location</th>
@@ -63,7 +63,7 @@
     <th>End</th>
     <th>Actions</th>
   </tr>
-  {% for m in meetings %}
+  {% for m in upcoming %}
   <tr>
     <form method="POST" action="/edit_meeting/{{ m['id'] }}">
       <td><input type="text" name="location" value="{{ m['location'] }}"></td>
@@ -77,6 +77,34 @@
   </tr>
   {% endfor %}
 </table>
+
+<!-- ✅ Meetings Table -->
+<h2 style="text-align:center;">Past Meetups</h2>
+{% if past %}
+<table>
+  <tr>
+    <th>Location</th>
+    <th>Start</th>
+    <th>End</th>
+    <th>Actions</th>
+  </tr>
+  {% for m in past %}
+  <tr>
+    <form method="POST" action="/edit_meeting/{{ m['id'] }}">
+      <td><input type="text" name="location" value="{{ m['location'] }}"></td>
+      <td><input type="date" name="start_date" value="{{ m['start_date'] }}"></td>
+      <td><input type="date" name="end_date" value="{{ m['end_date'] }}"></td>
+      <td>
+        <button type="submit">💾 Save</button>
+        <a href="/delete_meeting/{{ m['id'] }}" class="button-link">🗑️ Delete</a>
+      </td>
+    </form>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+  <p style="text-align: center;">No past meetups.</p>
+{% endif %}
 
 <!-- ✅ Calendar Section -->
 <h2 style="text-align:center;">Calendar View</h2>
