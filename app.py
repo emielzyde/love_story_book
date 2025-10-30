@@ -6,6 +6,12 @@ import functools
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
+CATEGORIES = {
+    "movies": ["🎬", "Movies"],
+    "books": ["📖", "Books"],
+    "restaurants": ["🍽", "Restaurants"],
+}
+
 
 def get_db_connection():
     conn = sqlite3.connect('data.db')
@@ -70,7 +76,7 @@ def logout():
 
 @app.route('/')
 def home():
-    return render_template('index.html') # username=session['username'])
+    return render_template('index.html', categories=CATEGORIES) # username=session['username'])
 
 
 # --- Countdown Page (now with calendar) ---
@@ -101,7 +107,7 @@ def countdown():
             days_until = (start - today).days
             break
 
-    return render_template('countdown.html', meetings=meetings, next_meeting=next_meeting, days_until=days_until)
+    return render_template('countdown.html', meetings=meetings, next_meeting=next_meeting, days_until=days_until, categories=CATEGORIES)
 
 
 @app.route('/edit_meeting/<int:id>', methods=['POST'])
@@ -130,54 +136,80 @@ def delete_meeting(id):
 
 
 # === MOVIES PAGE ===
-@app.route('/movies', methods=['GET', 'POST'])
-def movies():
+@app.route("/<category>", methods=["GET", "POST"])
+def category_page(category):
+    if category not in CATEGORIES:
+        return "404: Page not found", 404
+
     conn = get_db_connection()
 
-    # Add a new movie
-    if request.method == 'POST':
-        title = request.form['title']
-        if title.strip():
-            # Get the current max rank so the new movie appears last
-            max_rank = conn.execute('SELECT MAX(rank) FROM movies').fetchone()[0]
-            new_rank = (max_rank or 0) + 1
-            conn.execute('INSERT INTO movies (title, rank) VALUES (?, ?)', (title, new_rank))
+    # Add new item
+    if request.method == "POST" and "title" in request.form and "edit_id" not in request.form:
+        title = request.form["title"].strip()
+        if title:
+            conn.execute(
+                "INSERT INTO items (category, title, rank, done) VALUES (?, ?, ?, ?)",
+                (category, title, 1, 0)
+            )
             conn.commit()
-        conn.close()
-        return redirect(url_for('movies'))
 
-    # Display movie list
-    movies = conn.execute('SELECT * FROM movies ORDER BY rank ASC').fetchall()
+    # Delete item
+    elif request.method == "POST" and "delete_id" in request.form:
+        conn.execute("DELETE FROM items WHERE id = ?", (request.form["delete_id"],))
+        conn.commit()
+
+    # Edit item
+    elif request.method == "POST" and "edit_id" in request.form:
+        new_title = request.form["new_title"].strip()
+        if new_title:
+            conn.execute("UPDATE items SET title = ? WHERE id = ?", (new_title, request.form["edit_id"]))
+            conn.commit()
+
+    # Toggle done
+    elif request.method == "POST" and "toggle_done_id" in request.form:
+        item_id = request.form["toggle_done_id"]
+        done_value = int(request.form["done_value"])
+        conn.execute("UPDATE items SET done = ? WHERE id = ?", (done_value, item_id))
+        conn.commit()
+
+    # Get undone and done items separately
+    undone_items = conn.execute(
+        "SELECT * FROM items WHERE category = ? AND done = 0 ORDER BY rank ASC",
+        (category,)
+    ).fetchall()
+    done_items = conn.execute(
+        "SELECT * FROM items WHERE category = ? AND done = 1 ORDER BY rank ASC",
+        (category,)
+    ).fetchall()
+
     conn.close()
-    return render_template('movies.html', movies=movies)
 
+    return render_template(
+        "list_page.html",
+        category_name=CATEGORIES[category][1],
+        category_key=category,
+        undone_items=undone_items,
+        done_items=done_items,
+        categories=CATEGORIES
+    )
 
-# === DELETE MOVIE ===
-@app.route('/delete_movie/<int:movie_id>', methods=['POST'])
-def delete_movie(movie_id):
-    conn = get_db_connection()
-    conn.execute('DELETE FROM movies WHERE id = ?', (movie_id,))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('movies'))
+@app.route("/reorder/<category>", methods=["POST"])
+def reorder_items(category):
+    """Handle AJAX reordering of items."""
+    if category not in CATEGORIES:
+        return jsonify({"error": "Invalid category"}), 400
 
-
-# === UPDATE RANKS ===
-@app.route('/update_ranks', methods=['POST'])
-def update_ranks():
     data = request.get_json()
-    new_order = data.get('order')
-
-    if not new_order:
-        return jsonify({'status': 'error', 'message': 'No order provided'}), 400
+    if not data or "order" not in data:
+        return jsonify({"error": "No order data"}), 400
 
     conn = get_db_connection()
-    for rank, movie_id in enumerate(new_order, start=1):
-        conn.execute('UPDATE movies SET rank = ? WHERE id = ?', (rank, movie_id))
+    for index, item_id in enumerate(data["order"]):
+        conn.execute("UPDATE items SET rank = ? WHERE id = ?", (index + 1, item_id))
     conn.commit()
     conn.close()
 
-    return jsonify({'status': 'success'})
+    return jsonify({"success": True})
 
 
 # === MESSAGE BOARD ===
@@ -236,7 +268,7 @@ def messages():
     conn.close()
 
     grouped = group_messages_by_date(messages)
-    return render_template('messages.html', grouped=grouped, users=users)
+    return render_template('messages.html', grouped=grouped, users=users, categories=CATEGORIES)
 
 
 if __name__ == '__main__':

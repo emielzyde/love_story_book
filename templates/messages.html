@@ -100,11 +100,17 @@
   <header>Shared Message Board</header>
 
   <br>
-  <div style="text-align:center;">
-    <a href="/">🏠 Home</a> |
-    <a href="/movies">🎬 Movies</a> |
-    <a href="/countdown">📅 Meetings</a> |
+  <div class="category-links">
+    <a href="/">🏠 Home</a>  |
+    <a href="/messages">💬 Message Board</a>  |
+    <a href="/countdown">📅 Meetings</a>  |
+    {% for key, names in categories.items() %}
+      {% if key != category_key %}
+        <a href="/{{key}}">{{ names[0] }} {{ names[1] }}</a>  |
+      {% endif %}
+    {% endfor %}
   </div>
+
 
   <form class="message-form" method="POST">
     <select name="user_id" required>

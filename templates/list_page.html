@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>{{ category_name }}</header>
+<br>
+
+<!-- Category navigation -->
+<div class="category-links">
+  <a href="/">🏠 Home</a>  |
+  <a href="/messages">💬 Message Board</a>  |
+  <a href="/countdown">📅 Meetings</a>  |
+  {% for key, names in categories.items() %}
+    {% if key != category_key %}
+      <a href="/{{key}}">{{ names[0] }} {{ names[1] }}</a>  |
+    {% endif %}
+  {% endfor %}
+</div>
+
+<!-- Add new item form -->
+<form method="POST" class="add-form">
+  <input type="text" name="title" placeholder="Add new {{ category_key }}" required>
+  <input type="submit" value="Add">
+</form>
+
+<!-- To Do Items -->
+<h3 style="text-align: center;">To Do</h3>
+<ul id="item-list" class="item-list">
+  {% for item in undone_items %}
+    <li style="height: 60px;" id="item-{{ item['id'] }}" class="item-card">
+      <span class="item-title">{{ item['title'] }}</span>
+      <div class="buttons">
+        <form method="POST" style="display:inline;">
+          <input type="hidden" name="toggle_done_id" value="{{ item['id'] }}">
+          <input type="hidden" name="done_value" value="1">
+          <button type="submit" class="done-btn">Done</button>
+        </form>
+
+        <button type="button" class="edit-btn" onclick="showEditForm({{ item['id'] }}, '{{ item['title']|escape }}')">Edit</button>
+
+        <form method="POST" style="display:inline;">
+          <input type="hidden" name="delete_id" value="{{ item['id'] }}">
+          <button type="submit" class="delete-btn">Delete</button>
+        </form>
+      </div>
+
+      <!-- Hidden edit form -->
+      <form method="POST" class="edit-form" id="edit-form-{{ item['id'] }}" style="display:none;">
+        <input type="hidden" name="edit_id" value="{{ item['id'] }}">
+        <input type="text" name="new_title" id="new-title-{{ item['id'] }}" value="{{ item['title'] }}" required>
+        <input type="submit" value="Save">
+        <button type="button" onclick="hideEditForm({{ item['id'] }})">Cancel</button>
+      </form>
+    </li>
+  {% else %}
+    <li><em>No {{ category_key }} yet.</em></li>
+  {% endfor %}
+</ul>
+
+<!-- Completed Items -->
+<h3 style="text-align: center;">Completed</h3>
+<ul id="completed-list" class="item-list done-list">
+  {% for item in done_items %}
+    <li id="item-{{ item['id'] }}" class="item-card done">
+      <span class="item-title">{{ item['title'] }}</span>
+      <div class="buttons">
+        <form method="POST" style="display:inline;">
+          <input type="hidden" name="toggle_done_id" value="{{ item['id'] }}">
+          <input type="hidden" name="done_value" value="0">
+          <button type="submit" class="undo-btn">Undo</button>
+        </form>
+
+        <form method="POST" style="display:inline;">
+          <input type="hidden" name="delete_id" value="{{ item['id'] }}">
+          <button type="submit" class="delete-btn">Delete</button>
+        </form>
+      </div>
+    </li>
+  {% else %}
+    <li><em>No completed items yet.</em></li>
+  {% endfor %}
+</ul>
+
+<!-- Drag-and-drop functionality for To Do section only -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+function showEditForm(id, title) {
+  document.getElementById('edit-form-' + id).style.display = 'block';
+  document.getElementById('item-' + id).querySelector('.item-title').style.display = 'none';
+}
+function hideEditForm(id) {
+  document.getElementById('edit-form-' + id).style.display = 'none';
+  document.getElementById('item-' + id).querySelector('.item-title').style.display = 'inline';
+}
+const sortable = new Sortable(document.getElementById('item-list'), {
+  animation: 150,
+  onEnd: function (evt) {
+    const order = Array.from(document.querySelectorAll('#item-list li'))
+      .map(li => parseInt(li.id.replace('item-', '')));
+    fetch('{{ url_for("reorder_items", category=category_key) }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order })
+    });
+  }
+});
+</script>
+{% endblock %}

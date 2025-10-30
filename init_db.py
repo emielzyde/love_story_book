@@ -7,7 +7,8 @@ c = conn.cursor()
 # Drop old tables if they exist (optional, helps when resetting the DB)
 c.execute("DROP TABLE IF EXISTS users")
 c.execute("DROP TABLE IF EXISTS meetings")
-c.execute("DROP TABLE IF EXISTS movies")
+c.execute("DROP TABLE IF EXISTS items")
+c.execute("DROP TABLE IF EXISTS messages")
 
 # === USERS TABLE ===
 c.execute("""
@@ -30,10 +31,12 @@ CREATE TABLE meetings (
 
 # === MOVIES TABLE (simplified) ===
 c.execute("""
-CREATE TABLE movies (
+CREATE TABLE IF NOT EXISTS items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category TEXT NOT NULL,
     title TEXT NOT NULL,
-    rank INTEGER NOT NULL
+    rank INTEGER NOT NULL,
+    done INTEGER DEFAULT 0
 )
 """)
 
@@ -79,10 +82,12 @@ c.executemany(
     ]
 )
 
-c.executemany("INSERT INTO movies (title, rank) VALUES (?, ?)", [
-    ('Dune: Part Two', 1),
-    ('Inside Out 2', 2),
-    ('Gladiator II', 3)
+c.executemany("INSERT INTO items (category, title, rank) VALUES (?, ?, ?)", [
+    ('movies', 'Dune: Part Two', 1),
+    ('movies', 'Inside Out 2', 2),
+    ('movies', 'Gladiator II', 3),
+    ('books', 'Lord of the Rings', 1),
+    ('restaurants', 'Test Kitchen', 1),
 ])
 
 conn.commit()
