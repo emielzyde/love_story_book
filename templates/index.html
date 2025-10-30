@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Home | My App</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header>
+  Welcome to the story of our love 👋
+</header>
+
+<div style="text-align:center; margin-top:40px;">
+  <h2>Dashboard</h2>
+  <p>Select a page to manage:</p>
+
+  <a href="/countdown"><button>📅 Meetings & Countdown</button></a>
+  <a href="/movies"><button>🎬 Movie List</button></a>
+  <a href="/logout" class="button-link" style="background:#e74c3c;">🚪 Logout</a>
+</div>
+
+</body>
+</html>

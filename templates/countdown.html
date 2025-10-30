@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Meetings & Countdown | My App</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+  <!-- ✅ FullCalendar (using cdnjs for reliability) -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.10/index.global.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.10/index.global.min.js"></script>
+</head>
+<body>
+
+<header>
+  🗓 Meetings & Countdown
+</header>
+
+<div style="text-align:center;">
+  <a href="/home">🏠 Home</a> |
+  <a href="/movies">🎬 Movies</a> |
+  <a href="/logout">🚪 Logout</a>
+</div>
+
+<!-- ✅ Next Meeting Section -->
+{% if next_meeting %}
+  <div style="text-align:center; margin-top:30px;">
+    <h2>Next Meeting</h2>
+    <p>
+      📍 <b>{{ next_meeting['location'] }}</b><br>
+      🗓 {{ next_meeting['start_date'] }} → {{ next_meeting['end_date'] }}
+    </p>
+
+    <!-- Live Countdown -->
+    <div id="countdown-timer" style="font-size: 1.3em; color: #0066cc; margin-top: 10px;">
+      ⏳ Calculating time until next meeting...
+    </div>
+  </div>
+{% else %}
+  <p style="text-align:center;">No upcoming meetings found.</p>
+{% endif %}
+
+<!-- ✅ Add New Meeting Form -->
+<h2 style="text-align:center;">Add New Meeting</h2>
+<form method="POST">
+  <input type="text" name="location" placeholder="Location" required>
+  <input type="date" name="start_date" required>
+  <input type="date" name="end_date" required>
+  <button type="submit">➕ Add Meeting</button>
+</form>
+
+<!-- ✅ Meetings Table -->
+<h2 style="text-align:center;">All Meetings</h2>
+<table>
+  <tr>
+    <th>Location</th>
+    <th>Start</th>
+    <th>End</th>
+    <th>Actions</th>
+  </tr>
+  {% for m in meetings %}
+  <tr>
+    <form method="POST" action="/edit_meeting/{{ m['id'] }}">
+      <td><input type="text" name="location" value="{{ m['location'] }}"></td>
+      <td><input type="date" name="start_date" value="{{ m['start_date'] }}"></td>
+      <td><input type="date" name="end_date" value="{{ m['end_date'] }}"></td>
+      <td>
+        <button type="submit">💾 Save</button>
+        <a href="/delete_meeting/{{ m['id'] }}" class="button-link">🗑️ Delete</a>
+      </td>
+    </form>
+  </tr>
+  {% endfor %}
+</table>
+
+<!-- ✅ Calendar Section -->
+<h2 style="text-align:center;">Calendar View</h2>
+<div id="calendar"></div>
+
+<!-- ✅ Scripts -->
+<script>
+// === FullCalendar Setup ===
+document.addEventListener('DOMContentLoaded', function() {
+  var calendarEl = document.getElementById('calendar');
+  if (calendarEl) {
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'dayGridMonth',
+      events: [
+        {% for m in meetings %}
+          {
+            title: '{{ m["location"] }}',
+            start: '{{ m["start_date"] }}',
+            end: '{{ m["end_date"] }}'
+          },
+        {% endfor %}
+      ]
+    });
+    calendar.render();
+  }
+});
+
+// === Live Countdown Timer ===
+{% if next_meeting %}
+  const meetingDate = new Date('{{ next_meeting["start_date"] }}T00:00:00');
+  const countdownEl = document.getElementById('countdown-timer');
+
+  function updateCountdown() {
+    const now = new Date();
+    const diff = meetingDate - now;
+
+    if (diff <= 0) {
+      countdownEl.innerHTML = "🎉 The meeting starts today!";
+      countdownEl.style.color = "green";
+      return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const mins = Math.floor((diff / (1000 * 60)) % 60);
+    const secs = Math.floor((diff / 1000) % 60);
+
+    countdownEl.innerHTML =
+      `<p style="font-size: 16px;">⏳ Next meeting in <b>${days}</b> days, <b>${hours}</b> hrs, <b>${mins}</b> min, <b>${secs}</b> sec </p>`;
+  }
+  countdownEl.style.color = "black";
+
+  updateCountdown();
+  setInterval(updateCountdown, 1000); // update every second
+{% endif %}
+</script>
+
+</body>
+</html>

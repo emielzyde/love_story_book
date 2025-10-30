@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login | My App</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header>
+  Login to Your Account
+</header>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="flash-message {{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<form method="POST" action="/">
+  <label for="username">Username:</label>
+  <input type="text" name="username" id="username" required>
+
+  <label for="password">Password:</label>
+  <input type="password" name="password" id="password" required>
+
+  <div style="margin-top:10px;">
+    <label><input type="checkbox" name="remember"> Remember me</label>
+  </div>
+
+  <button type="submit">Login</button>
+</form>
+
+</body>
+</html>
