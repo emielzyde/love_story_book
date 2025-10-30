@@ -71,8 +71,8 @@
   </style>
 </head>
 <body>
-  <h2>🎬 Movie Ranking</h2>
-
+  <header>🎬 Movie Ranking</header>
+  <br>
   <div style="text-align:center;">
     <a href="/">🏠 Home</a> |
     <a href="/countdown">📅 Meetings</a> |
@@ -95,7 +95,8 @@
     {% endfor %}
   </ul>
 
-  <button id="save-order">💾 Save Order</button>
+  <button style="display: block;
+        margin: 0 auto;" id="save-order">💾 Save Order</button>
 
   <script>
     const list = document.getElementById('movie-list');
