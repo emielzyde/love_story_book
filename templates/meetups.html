@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Meetings & Countdown | My App</title>
+  <title>Meetings | My App</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
   <!-- ✅ FullCalendar (using cdnjs for reliability) -->
@@ -12,14 +12,14 @@
 <body>
 
 <header>
-  🗓 Meetings & Countdown
+  🗓 Meetups
 </header>
 
 <br>
 <div class="category-links">
   <a href="/">🏠 Home</a>  |
   <a href="/messages">💬 Message Board</a>  |
-  <a href="/countdown">📅 Meetings</a>  |
+  <a href="/countdown">📅 Meetups</a>  |
   {% for key, names in categories.items() %}
     {% if key != category_key %}
       <a href="/{{key}}">{{ names[0] }} {{ names[1] }}</a>  |
@@ -30,7 +30,7 @@
 <!-- ✅ Next Meeting Section -->
 {% if next_meeting %}
   <div style="text-align:center; margin-top:30px;">
-    <h2>Next Meeting</h2>
+    <h2>Next Meetup</h2>
     <p>
       📍 <b>{{ next_meeting['location'] }}</b><br>
       🗓 {{ next_meeting['start_date'] }} → {{ next_meeting['end_date'] }}
@@ -38,24 +38,24 @@
 
     <!-- Live Countdown -->
     <div id="countdown-timer" style="font-size: 1.3em; color: #0066cc; margin-top: 10px;">
-      ⏳ Calculating time until next meeting...
+      ⏳ Calculating time until next meetup...
     </div>
   </div>
 {% else %}
-  <p style="text-align:center;">No upcoming meetings found.</p>
+  <p style="text-align:center;">No upcoming meetups found.</p>
 {% endif %}
 
 <!-- ✅ Add New Meeting Form -->
-<h2 style="text-align:center;">Add New Meeting</h2>
+<h2 style="text-align:center;">Add New Meetup</h2>
 <form method="POST">
   <input type="text" name="location" placeholder="Location" required>
   <input type="date" name="start_date" required>
   <input type="date" name="end_date" required>
-  <button type="submit">➕ Add Meeting</button>
+  <button type="submit">➕ Add Meetup</button>
 </form>
 
 <!-- ✅ Meetings Table -->
-<h2 style="text-align:center;">All Meetings</h2>
+<h2 style="text-align:center;">All Meetups</h2>
 <table>
   <tr>
     <th>Location</th>
@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const diff = meetingDate - now;
 
     if (diff <= 0) {
-      countdownEl.innerHTML = "🎉 The meeting starts today!";
+      countdownEl.innerHTML = "🎉 The meetup is happening today!";
       countdownEl.style.color = "green";
       return;
     }
@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const secs = Math.floor((diff / 1000) % 60);
 
     countdownEl.innerHTML =
-      `<p style="font-size: 16px;">⏳ Next meeting in <b>${days}</b> days, <b>${hours}</b> hrs, <b>${mins}</b> min, <b>${secs}</b> sec </p>`;
+      `<p style="font-size: 16px;">⏳ Next meetup in <b>${days}</b> days, <b>${hours}</b> hrs, <b>${mins}</b> min, <b>${secs}</b> sec </p>`;
   }
   countdownEl.style.color = "black";
 

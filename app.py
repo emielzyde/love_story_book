@@ -52,7 +52,7 @@ def countdown():
             days_until = (start - today).days
             break
 
-    return render_template('countdown.html', meetings=meetings, next_meeting=next_meeting, days_until=days_until, categories=CATEGORIES)
+    return render_template('meetups.html', meetings=meetings, next_meeting=next_meeting, days_until=days_until, categories=CATEGORIES)
 
 
 @app.route('/edit_meeting/<int:id>', methods=['POST'])
