@@ -1,7 +1,7 @@
-from flask import Flask,jsonify, render_template, request, redirect, url_for, session, flash, make_response
 import sqlite3
 from datetime import date, datetime, timedelta
-import functools
+
+from flask import Flask, jsonify, render_template, request, redirect, url_for
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -18,62 +18,6 @@ def get_db_connection():
     conn = sqlite3.connect('data.db')
     conn.row_factory = sqlite3.Row
     return conn
-
-
-def login_required(view):
-    @functools.wraps(view)
-    def wrapped_view(**kwargs):
-        if 'user_id' not in session:
-            user_id = request.cookies.get('remember_me')
-            if user_id:
-                conn = get_db_connection()
-                user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-                conn.close()
-                if user:
-                    session['user_id'] = user['id']
-                    session['username'] = user['name']
-                else:
-                    return redirect(url_for('login'))
-            else:
-                return redirect(url_for('login'))
-        return view(**kwargs)
-    return wrapped_view
-
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        remember = request.form.get('remember')
-
-        conn = get_db_connection()
-        user = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
-        conn.close()
-
-        if user and user['password'] == password:
-            session['user_id'] = user['id']
-            session['username'] = user['username']
-            flash('Login successful!', 'success')
-
-            resp = make_response(redirect(url_for('home')))
-            if remember:
-                expire_date = datetime.now() + timedelta(days=7)
-                resp.set_cookie('remember_me', str(user['id']), expires=expire_date)
-            return resp
-        else:
-            flash('Invalid username or password', 'error')
-
-    return render_template('login.html')
-
-
-@app.route('/logout')
-def logout():
-    resp = make_response(redirect(url_for('login')))
-    session.clear()
-    resp.set_cookie('remember_me', '', expires=0)
-    return resp
-
 
 @app.route('/')
 def home():
