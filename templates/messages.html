@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Message Board</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f8f8;
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    .message-form {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    select, textarea {
+      width: 80%;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      margin: 5px 0;
+      font-size: 14px;
+    }
+    input[type="submit"] {
+      background-color: #007BFF;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    input[type="submit"]:hover {
+      background-color: #0056b3;
+    }
+    .message-list {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .date-group {
+      margin-top: 30px;
+    }
+    .date-group h3 {
+      background-color: #eee;
+      padding: 10px;
+      border-radius: 5px;
+      text-align: center;
+      color: #555;
+    }
+    .message {
+      background-color: white;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 10px;
+      margin-bottom: 10px;
+      position: relative;
+    }
+    .meta {
+      font-size: 0.9em;
+      color: #666;
+    }
+    .edit-btn {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      background: none;
+      border: none;
+      color: #007BFF;
+      cursor: pointer;
+      font-size: 0.9em;
+    }
+    .edit-btn:hover {
+      text-decoration: underline;
+    }
+    .edit-form {
+      display: none;
+      margin-top: 10px;
+    }
+    .edit-form textarea {
+      width: 100%;
+      height: 60px;
+    }
+    .edit-form button {
+      margin-top: 5px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <header>Shared Message Board</header>
+
+  <br>
+  <div style="text-align:center;">
+    <a href="/">🏠 Home</a> |
+    <a href="/movies">🎬 Movies</a> |
+    <a href="/countdown">📅 Meetings</a> |
+  </div>
+
+  <form class="message-form" method="POST">
+    <select name="user_id" required>
+      {% for user in users %}
+        <option value="{{ user['id'] }}">{{ user['username'] }}</option>
+      {% endfor %}
+    </select><br>
+    <textarea name="content" placeholder="Write your message..." required></textarea><br>
+    <input type="submit" value="Send Message">
+  </form>
+
+  <div class="message-list">
+    {% for date_label, messages in grouped.items() %}
+      <div class="date-group">
+        <h3>{{ date_label }}</h3>
+        {% for msg in messages %}
+          <div class="message">
+            <div class="meta">
+              <b>{{ msg['username'] }}</b> — {{ msg['timestamp'] }}
+            </div>
+            <div class="content" id="content-{{ msg['id'] }}">{{ msg['content'] }}</div>
+            <button class="edit-btn" onclick="toggleEdit({{ msg['id'] }})">Edit</button>
+
+            <form class="edit-form" id="edit-form-{{ msg['id'] }}" method="POST" style="display:none;">
+              <textarea name="new_content">{{ msg['content'] }}</textarea>
+              <input type="hidden" name="edit_id" value="{{ msg['id'] }}">
+              <button type="submit">Save</button>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <script>
+    function toggleEdit(id) {
+      const form = document.getElementById('edit-form-' + id);
+      form.style.display = (form.style.display === 'none') ? 'block' : 'none';
+    }
+  </script>
+</body>
+</html>

@@ -36,6 +36,31 @@ CREATE TABLE movies (
     rank INTEGER NOT NULL
 )
 """)
+
+# Users table (for dropdown)
+c.execute('''
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password TEXT
+)
+''')
+
+# Messages table
+c.execute('''
+CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+)
+''')
+
+# Add two users if they don’t exist
+c.execute("INSERT OR IGNORE INTO users (id, username) VALUES (1, 'Alexa')")
+c.execute("INSERT OR IGNORE INTO users (id, username) VALUES (2, 'Emiel')")
+
 # === Optional: Add sample data ===
 c.executemany(
     "INSERT INTO users (username, password) VALUES (?, ?)",

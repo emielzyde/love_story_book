@@ -1,6 +1,6 @@
 from flask import Flask,jsonify, render_template, request, redirect, url_for, session, flash, make_response
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import functools
 
 app = Flask(__name__)
@@ -178,6 +178,65 @@ def update_ranks():
     conn.close()
 
     return jsonify({'status': 'success'})
+
+
+# === MESSAGE BOARD ===
+def group_messages_by_date(messages):
+    """Group messages into sections by date (Today, Yesterday, etc.)"""
+    grouped = {}
+    today = date.today()
+    for msg in messages:
+        msg_date = datetime.strptime(msg["timestamp"], "%Y-%m-%d %H:%M:%S").date()
+        if msg_date == today:
+            label = "Today"
+        elif msg_date == today - timedelta(days=1):
+            label = "Yesterday"
+        else:
+            label = msg_date.strftime("%B %d, %Y")
+        grouped.setdefault(label, []).append(msg)
+    return grouped
+
+
+@app.route('/')
+def index():
+    return redirect(url_for('messages'))
+
+
+@app.route('/messages', methods=['GET', 'POST'])
+def messages():
+    conn = get_db_connection()
+
+    # Add new message
+    if request.method == 'POST' and 'content' in request.form:
+        user_id = request.form['user_id']
+        content = request.form['content']
+        if content.strip():
+            conn.execute(
+                'INSERT INTO messages (user_id, content, timestamp) VALUES (?, ?, ?)',
+                (user_id, content, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            )
+            conn.commit()
+
+    # Edit existing message
+    if request.method == 'POST' and 'edit_id' in request.form:
+        edit_id = request.form['edit_id']
+        new_content = request.form['new_content']
+        conn.execute('UPDATE messages SET content = ? WHERE id = ?', (new_content, edit_id))
+        conn.commit()
+
+    # Get all messages (newest first)
+    messages = conn.execute('''
+        SELECT messages.*, users.username
+        FROM messages
+        JOIN users ON messages.user_id = users.id
+        ORDER BY messages.timestamp DESC
+    ''').fetchall()
+
+    users = conn.execute('SELECT * FROM users').fetchall()
+    conn.close()
+
+    grouped = group_messages_by_date(messages)
+    return render_template('messages.html', grouped=grouped, users=users)
 
 
 if __name__ == '__main__':
