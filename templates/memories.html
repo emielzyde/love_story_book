@@ -28,7 +28,7 @@
                 {% if memory.description %}
                     <p class="preview">{{ memory.description[:100] }}{% if memory.description|length > 100 %}...{% endif %}</p>
                 {% endif %}
-                <p class="date">{{ memory.date_added[:10] }}</p>
+                <p class="date">{{ memory.date_added.date() }}</p>
             </div>
         {% else %}
             <p>No memories yet.</p>

@@ -11,7 +11,7 @@
     {% else %}
       <header>{{ memory["title"] }}</header>
       <a href="{{ url_for('memories') }}" class="button">Back to Memories</a><br>
-      <p class="date">{{ memory["date_added"][:10] if memory["date_added"] else "" }}</p>
+      <p class="date">{{ memory["date_added"].date() if memory["date_added"] else "" }}</p>
       <p>{{ memory["description"] }}</p>
 
       <h2>Files</h2>

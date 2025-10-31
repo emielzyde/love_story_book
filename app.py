@@ -1,5 +1,7 @@
 import os
 import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from datetime import date, datetime, timedelta
 
 from flask import Flask, send_from_directory, jsonify, render_template, request, \
@@ -20,6 +22,10 @@ CATEGORIES = {
     "locations": ["🌍", "Locations"]
 }
 
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+
 # --- Helper: allowed file types ---
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in app.config["ALLOWED_EXTENSIONS"]
@@ -29,10 +35,16 @@ def allowed_file(filename):
 def uploaded_file(filename):
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
+
 def get_db_connection():
-    conn = sqlite3.connect('data.db')
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     return conn
+
+@app.teardown_appcontext
+def close_db(exception):
+    db = getattr(app, '_db', None)
+    if db is not None:
+        db.close()
 
 @app.route('/')
 def home():
@@ -43,18 +55,21 @@ def home():
 @app.route('/countdown', methods=['GET', 'POST'])
 def countdown():
     conn = get_db_connection()
+    cur = conn.cursor()
 
     if request.method == 'POST':
         location = request.form['location']
         start_date = request.form['start_date']
         end_date = request.form['end_date']
-        conn.execute("""
-            INSERT INTO meetings (location, start_date, end_date)
-            VALUES (?, ?, ?)
-        """, (location, start_date, end_date))
+        cur.execute(
+            "INSERT INTO meetings (location, start_date, end_date) VALUES (%s, %s, %s)",
+            (location, start_date, end_date)
+        )
         conn.commit()
 
-    meetings = conn.execute("SELECT * FROM meetings ORDER BY start_date ASC").fetchall()
+    cur.execute("SELECT * FROM meetings ORDER BY start_date ASC")
+    meetings = cur.fetchall()
+    cur.close()
     conn.close()
 
     today = datetime.now().date()
@@ -64,14 +79,14 @@ def countdown():
     past = []
 
     for m in meetings:
-        start = datetime.strptime(m['start_date'], "%Y-%m-%d").date()
+        start = m['start_date']
         if start >= today:
             next_meeting = m
             days_until = (start - today).days
             break
 
     for m in meetings:
-        start_date = datetime.strptime(m["start_date"], "%Y-%m-%d").date()
+        start_date = m["start_date"]
         if start_date >= today:
             upcoming.append(m)
         else:
@@ -86,12 +101,13 @@ def edit_meeting(id):
     start_date = request.form['start_date']
     end_date = request.form['end_date']
     conn = get_db_connection()
-    conn.execute("""
-        UPDATE meetings 
-        SET location = ?, start_date = ?, end_date = ? 
-        WHERE id = ?
-    """, (location, start_date, end_date, id))
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE meetings SET location = %s, start_date = %s, end_date = %s WHERE id = %s",
+        (location, start_date, end_date, id)
+    )
     conn.commit()
+    cur.close()
     conn.close()
     return redirect(url_for('countdown'))
 
@@ -99,8 +115,10 @@ def edit_meeting(id):
 @app.route('/delete_meeting/<int:id>')
 def delete_meeting(id):
     conn = get_db_connection()
-    conn.execute("DELETE FROM meetings WHERE id = ?", (id,))
+    cur = conn.cursor()
+    cur.execute("DELETE FROM meetings WHERE id = %s", (id,))
     conn.commit()
+    cur.close()
     conn.close()
     return redirect(url_for('countdown'))
 
@@ -112,46 +130,49 @@ def category_page(category):
         return "404: Page not found", 404
 
     conn = get_db_connection()
+    cur = conn.cursor()
 
     # Add new item
     if request.method == "POST" and "title" in request.form and "edit_id" not in request.form:
         title = request.form["title"].strip()
         if title:
-            conn.execute(
-                "INSERT INTO items (category, title, rank, done) VALUES (?, ?, ?, ?)",
-                (category, title, 1, 0)
+            cur.execute(
+                "INSERT INTO items (category, title, rank, done) VALUES (%s, %s, %s, %s)",
+                (category, title, 1, False)
             )
             conn.commit()
 
     # Delete item
     elif request.method == "POST" and "delete_id" in request.form:
-        conn.execute("DELETE FROM items WHERE id = ?", (request.form["delete_id"],))
+        cur.execute("DELETE FROM items WHERE id = %s", (request.form["delete_id"],))
         conn.commit()
 
     # Edit item
     elif request.method == "POST" and "edit_id" in request.form:
         new_title = request.form["new_title"].strip()
         if new_title:
-            conn.execute("UPDATE items SET title = ? WHERE id = ?", (new_title, request.form["edit_id"]))
+            cur.execute("UPDATE items SET title = %s WHERE id = %s", (new_title, request.form["edit_id"]))
             conn.commit()
 
     # Toggle done
     elif request.method == "POST" and "toggle_done_id" in request.form:
         item_id = request.form["toggle_done_id"]
-        done_value = int(request.form["done_value"])
-        conn.execute("UPDATE items SET done = ? WHERE id = ?", (done_value, item_id))
+        done_value = request.form["done_value"]
+        done_bool = done_value in ["true", "1", "on", True]
+        cur.execute("UPDATE items SET done = %s WHERE id = %s", (done_bool, item_id))
         conn.commit()
 
     # Get undone and done items separately
-    undone_items = conn.execute(
-        "SELECT * FROM items WHERE category = ? AND done = 0 ORDER BY rank ASC",
-        (category,)
-    ).fetchall()
-    done_items = conn.execute(
-        "SELECT * FROM items WHERE category = ? AND done = 1 ORDER BY rank ASC",
-        (category,)
-    ).fetchall()
+    cur.execute(
+        "SELECT * FROM items WHERE category = %s AND done = FALSE ORDER BY rank ASC",
+        (category,))
+    undone_items = cur.fetchall()
+    cur.execute(
+        "SELECT * FROM items WHERE category = %s AND done = TRUE ORDER BY rank ASC",
+        (category,))
+    done_items = cur.fetchall()
 
+    cur.close()
     conn.close()
 
     return render_template(
@@ -174,9 +195,11 @@ def reorder_items(category):
         return jsonify({"error": "No order data"}), 400
 
     conn = get_db_connection()
+    cur = conn.cursor()
     for index, item_id in enumerate(data["order"]):
-        conn.execute("UPDATE items SET rank = ? WHERE id = ?", (index + 1, item_id))
+        cur.execute("UPDATE items SET rank = %s WHERE id = %s", (index + 1, item_id))
     conn.commit()
+    cur.close()
     conn.close()
 
     return jsonify({"success": True})
@@ -188,7 +211,7 @@ def group_messages_by_date(messages):
     grouped = {}
     today = date.today()
     for msg in messages:
-        msg_date = datetime.strptime(msg["timestamp"], "%Y-%m-%d %H:%M:%S").date()
+        msg_date = msg["timestamp"]
         if msg_date == today:
             label = "Today"
         elif msg_date == today - timedelta(days=1):
@@ -207,15 +230,16 @@ def index():
 @app.route('/messages', methods=['GET', 'POST'])
 def messages():
     conn = get_db_connection()
+    cur = conn.cursor()
 
     # Add new message
     if request.method == 'POST' and 'content' in request.form:
         user_id = request.form['user_id']
         content = request.form['content']
         if content.strip():
-            conn.execute(
-                'INSERT INTO messages (user_id, content, timestamp) VALUES (?, ?, ?)',
-                (user_id, content, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            cur.execute(
+                "INSERT INTO messages (user_id, content) VALUES (%s, %s)",
+                (user_id, content)
             )
             conn.commit()
 
@@ -223,20 +247,21 @@ def messages():
     if request.method == 'POST' and 'edit_id' in request.form:
         edit_id = request.form['edit_id']
         new_content = request.form['new_content']
-        conn.execute('UPDATE messages SET content = ? WHERE id = ?', (new_content, edit_id))
+        cur.execute("UPDATE messages SET content = %s WHERE id = %s", (new_content, edit_id))
         conn.commit()
 
     # Get all messages (newest first)
-    messages = conn.execute('''
-        SELECT messages.*, users.username
-        FROM messages
-        JOIN users ON messages.user_id = users.id
-        ORDER BY messages.timestamp DESC
-    ''').fetchall()
-
-    users = conn.execute('SELECT * FROM users').fetchall()
+    cur.execute("""
+            SELECT messages.*, users.username
+            FROM messages
+            JOIN users ON messages.user_id = users.id
+            ORDER BY messages.timestamp DESC
+        """)
+    messages = cur.fetchall()
+    cur.execute("SELECT id, username FROM users")
+    users = cur.fetchall()
+    cur.close()
     conn.close()
-
     grouped = group_messages_by_date(messages)
     return render_template('messages.html', grouped=grouped, users=users, categories=CATEGORIES)
 
@@ -248,7 +273,10 @@ def row_to_dict(row):
 @app.route("/memories")
 def memories():
     conn = get_db_connection()
-    rows = conn.execute("SELECT * FROM memories ORDER BY date_added DESC").fetchall()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM memories ORDER BY date_added DESC")
+    rows = cur.fetchall()
+    cur.close()
     conn.close()
 
     # convert each sqlite3.Row to a plain dict
@@ -259,8 +287,12 @@ def memories():
 @app.route("/memory/<int:memory_id>")
 def view_memory(memory_id):
     conn = get_db_connection()
-    mem_row = conn.execute("SELECT * FROM memories WHERE id = ?", (memory_id,)).fetchone()
-    media_rows = conn.execute("SELECT * FROM memory_media WHERE memory_id = ?", (memory_id,)).fetchall()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM memories WHERE id = %s", (memory_id,))
+    mem_row = cur.fetchone()
+    cur.execute("SELECT * FROM memory_media WHERE memory_id = %s", (memory_id,))
+    media_rows = cur.fetchall()
+    cur.close()
     conn.close()
 
     # Convert rows to dicts
@@ -277,9 +309,11 @@ def add_memory():
         description = request.form["description"]
 
         conn = get_db_connection()
-        c = conn.cursor()
-        c.execute("INSERT INTO memories (title, description) VALUES (?, ?)", (title, description))
-        memory_id = c.lastrowid
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO memories (title, description) VALUES (%s, %s) RETURNING id",
+            (title, description))
+        memory_id = cur.fetchone()["id"]
 
         # Handle optional files
         files = request.files.getlist("media_files")
@@ -288,9 +322,10 @@ def add_memory():
                 filename = secure_filename(file.filename)
                 filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
                 file.save(filepath)
-                c.execute("INSERT INTO memory_media (memory_id, file_path) VALUES (?, ?)", (memory_id, filename))
+                cur.execute("INSERT INTO memory_media (memory_id, file_path) VALUES (%s, %s)", (memory_id, filename))
 
         conn.commit()
+        cur.close()
         conn.close()
         return redirect(url_for("memories"))
     return render_template("add_memory.html")
@@ -298,8 +333,11 @@ def add_memory():
 @app.route("/edit_memory/<int:memory_id>", methods=["GET", "POST"])
 def edit_memory(memory_id):
     conn = get_db_connection()
-    mem_row = conn.execute("SELECT * FROM memories WHERE id = ?", (memory_id,)).fetchone()
-    media_rows = conn.execute("SELECT * FROM memory_media WHERE memory_id = ?", (memory_id,)).fetchall()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM memories WHERE id = %s", (memory_id,))
+    mem_row = cur.fetchone()
+    cur.execute("SELECT * FROM memory_media WHERE memory_id = %s", (memory_id,))
+    media_rows = cur.fetchall()
 
     memory = {k: mem_row[k] for k in mem_row.keys()} if mem_row else None
     media = [{k: m[k] for k in m.keys()} for m in media_rows]
@@ -308,10 +346,8 @@ def edit_memory(memory_id):
         title = request.form.get("title")
         description = request.form.get("description")
 
-        conn.execute(
-            "UPDATE memories SET title = ?, description = ? WHERE id = ?",
-            (title, description, memory_id)
-        )
+        cur.execute("UPDATE memories SET title = %s, description = %s WHERE id = %s",
+                    (title, description, memory_id))
         conn.commit()
 
         # Handle optional file uploads
@@ -320,11 +356,11 @@ def edit_memory(memory_id):
             if f.filename:
                 filepath = secure_filename(f.filename)
                 f.save(os.path.join(app.config["UPLOAD_FOLDER"], filepath))
-                conn.execute(
-                    "INSERT INTO memory_media (memory_id, file_path) VALUES (?, ?)",
-                    (memory_id, filepath)
-                )
+                cur.execute(
+                    "INSERT INTO memory_media (memory_id, file_path) VALUES (%s, %s)",
+                    (memory_id, filepath))
         conn.commit()
+        cur.close()
         conn.close()
         return redirect(url_for("edit_memory", memory_id=memory_id))
 
@@ -336,22 +372,27 @@ def edit_memory(memory_id):
 @app.route("/delete_memory/<int:memory_id>", methods=["POST"])
 def delete_memory(memory_id):
     conn = get_db_connection()
-    conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
+    cur = conn.cursor()
+    cur.execute("DELETE FROM memories WHERE id = %s", (memory_id,))
     conn.commit()
+    cur.close()
     conn.close()
     return redirect(url_for("memories"))
 
 @app.route("/delete_memory_file/<int:file_id>/<int:memory_id>", methods=["POST"])
 def delete_memory_file(file_id, memory_id):
     conn = get_db_connection()
-    file = conn.execute("SELECT * FROM memory_media WHERE id = ?", (file_id,)).fetchone()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM memory_media WHERE id = %s", (file_id,))
+    file = cur.fetchone()
     if file:
         try:
             os.remove(os.path.join(app.config["UPLOAD_FOLDER"], file["file_path"]))
         except FileNotFoundError:
             pass
-        conn.execute("DELETE FROM memory_media WHERE id = ?", (file_id,))
+        cur.execute("DELETE FROM memory_media WHERE id = %s", (file_id,))
         conn.commit()
+    cur.close()
     conn.close()
     return redirect(url_for("edit_memory", memory_id=memory_id))
 
