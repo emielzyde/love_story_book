@@ -9,37 +9,66 @@
     body {
       font-family: Arial, sans-serif;
       background-color: #f8f8f8;
-      padding: 20px;
+      margin: 0;           /* Remove browser default margin */
+      padding: 0;          /* Remove extra padding */
     }
     h2 {
       text-align: center;
       color: #333;
     }
     .message-form {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    select, textarea {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 30px auto;
+      background-color: #ffffff;
+      border-radius: 10px;
+      padding: 20px;
       width: 80%;
-      padding: 10px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      margin: 5px 0;
-      font-size: 14px;
+      max-width: 600px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-    input[type="submit"] {
+    .message-form select,
+    .message-form textarea {
+      width: 100%;
+      max-width: 650px;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin: 8px 0;
+      font-size: 15px;
+    }
+    .message-form textarea {
+      height: 100px;
+      resize: vertical;
+    }
+    .message-form input[type="submit"] {
       background-color: #007BFF;
       color: white;
-      padding: 10px 20px;
+      padding: 10px 25px;
       border: none;
-      border-radius: 5px;
+      border-radius: 6px;
       cursor: pointer;
+      font-size: 15px;
+      margin-top: 10px;
     }
-    input[type="submit"]:hover {
+    .message-form input[type="submit"]:hover {
       background-color: #0056b3;
     }
+    .category-links {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+    .category-links a {
+      color: #007BFF;
+      text-decoration: none;
+    }
+    .category-links a:hover {
+      text-decoration: underline;
+    }
     .message-list {
-      max-width: 600px;
+      max-width: 700px;
       margin: 0 auto;
     }
     .date-group {
@@ -64,17 +93,23 @@
       font-size: 0.9em;
       color: #666;
     }
-    .edit-btn {
-      position: absolute;
-      right: 10px;
-      top: 10px;
+    .btn-container {
+      margin-top: 8px;
+    }
+    .edit-btn, .delete-btn {
       background: none;
       border: none;
-      color: #007BFF;
       cursor: pointer;
       font-size: 0.9em;
+      margin-right: 10px;
     }
-    .edit-btn:hover {
+    .edit-btn {
+      color: #007BFF;
+    }
+    .delete-btn {
+      color: #dc3545;
+    }
+    .edit-btn:hover, .delete-btn:hover {
       text-decoration: underline;
     }
     .edit-form {
@@ -94,12 +129,18 @@
       border-radius: 5px;
       cursor: pointer;
     }
+    form {
+      display: inline-block;
+      margin: 0;
+      padding: 0;
+      border: none;
+      background: none;
+    }
   </style>
 </head>
 <body>
   <header>Shared Message Board</header>
 
-  <br>
   <div class="category-links">
     <a href="/">🏠 Home</a>  |
     <a href="/messages">💬 Message Board</a>  |
@@ -112,14 +153,13 @@
     {% endfor %}
   </div>
 
-
   <form class="message-form" method="POST">
     <select name="user_id" required>
       {% for user in users %}
         <option value="{{ user['id'] }}">{{ user['username'] }}</option>
       {% endfor %}
-    </select><br>
-    <textarea name="content" placeholder="Write your message..." required></textarea><br>
+    </select>
+    <textarea name="content" placeholder="Write your message..." required></textarea>
     <input type="submit" value="Send Message">
   </form>
 
@@ -133,9 +173,15 @@
               <b>{{ msg['username'] }}</b> — {{ msg['timestamp'] }}
             </div>
             <div class="content" id="content-{{ msg['id'] }}">{{ msg['content'] }}</div>
-            <button class="edit-btn" onclick="toggleEdit({{ msg['id'] }})">Edit</button>
 
-            <form class="edit-form" id="edit-form-{{ msg['id'] }}" method="POST" style="display:none;">
+            <div class="btn-container">
+              <button class="edit-btn" onclick="toggleEdit({{ msg['id'] }})">Edit</button>
+              <form method="POST" action="{{ url_for('delete_message', message_id=msg['id']) }}">
+                <button class="delete-btn" type="submit">Delete</button>
+              </form>
+            </div>
+
+            <form class="edit-form" id="edit-form-{{ msg['id'] }}" method="POST">
               <textarea name="new_content">{{ msg['content'] }}</textarea>
               <input type="hidden" name="edit_id" value="{{ msg['id'] }}">
               <button type="submit">Save</button>

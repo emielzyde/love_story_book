@@ -265,6 +265,16 @@ def messages():
     grouped = group_messages_by_date(messages)
     return render_template('messages.html', grouped=grouped, users=users, categories=CATEGORIES)
 
+@app.route('/delete_message/<int:message_id>', methods=['POST'])
+def delete_message(message_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM messages WHERE id = %s", (message_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return redirect(url_for('messages'))
+
 def row_to_dict(row):
     if row is None:
         return None
