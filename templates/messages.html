@@ -170,7 +170,7 @@
         {% for msg in messages %}
           <div class="message">
             <div class="meta">
-              <b>{{ msg['username'] }}</b> — {{ msg['timestamp'] }}
+              <b>{{ msg['username'] }}</b> — {{ msg['timestamp'].date() }}
             </div>
             <div class="content" id="content-{{ msg['id'] }}">{{ msg['content'] }}</div>
 
