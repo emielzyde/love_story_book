@@ -15,15 +15,14 @@
   <p>Which part of our story do you want to explore?</p>
 
   <a href="/countdown"><button>📅 Meetups</button></a>
-  <br>
   <a href="/messages"><button>💬 Messages</button></a>
-  <br>
   <a href="/memories"><button>🧠 Memories</button></a>
   {% for key, names in categories.items() %}
-    <br>
     <a href="{{ url_for('category_page', category=key) }}"><button>{{ names[0] }} {{ names[1] }}</button></button></a>
   {% endfor %}
 </div>
+
+<img src="{{ url_for('static', filename='front_page_image.jpg') }}" alt="Welcome Image" class="home-image">
 
 </body>
 </html>
