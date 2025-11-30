@@ -19,7 +19,9 @@ CATEGORIES = {
     "movies": ["🎬", "Movies"],
     "books": ["📖", "Books"],
     "restaurants": ["🍽", "Restaurants"],
-    "locations": ["🌍", "Locations"]
+    "locations": ["🌍", "Locations"],
+    "experiences": ["🪂", "Experiences"],
+    "sex_locations": ["💑", "Sex Locations"],
 }
 
 
